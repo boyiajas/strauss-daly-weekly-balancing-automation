@@ -1,0 +1,92 @@
+compare_file_refs.py notes
+
+Purpose
+  - Download the LegalSuite report (or use "Report (SUP).CSV") to XLSX.
+  - Compare Matter File Ref values against File Ref values in the Standard Bank claim file.
+  - Write missing Matter File Ref values to an output XLSX.
+  - If missing values exist, download the weekly balancing file, lookup statuses,
+    write found/not-found results, and optionally close matters in LegalSuite.
+  - Create a "verification" folder with copied verification workbooks and run summaries.
+
+Default flow (no flags)
+  1) Fetch the LegalSuite report using the API key (or use --csv to skip API).
+  2) Connect to FTP and download today's Standard Bank claim file
+     from "Standard Bank_ClaimsAmount" using the date-based filename pattern.
+  3) Write "Report (SUP).xlsx" from LegalSuite (or convert CSV if --csv used).
+  4) Read "Matter File Ref" from the report data.
+  5) Read "File Ref" from the Standard Bank claim XLSX.
+  6) Normalize values and compare; write missing refs to
+     "Missing_Matter_File_Ref.xlsx".
+  7) Copy generated output workbooks into the verification folder and stamp each row with:
+     - Verification Status
+     - Verification Timestamp
+     - Verification Notes
+     - Verification GET Response
+     - Other verified values such as the source file and status
+  8) If missing refs exist:
+     - Connect to FTP and download the weekly file from
+       "Standard Bank Claims Weekly Balancing".
+     - Select the newest weekly file that falls within the current week (Mon-Sun)
+       and matches "Standard_Bank_Panel_L_Weekly_YYYYMMDD.xlsx".
+     - Read the weekly file and find the status for each missing ref.
+     - If a ref is not found by weekly "File Ref", look it up in LegalSuite,
+       take "Their Ref", and search the weekly "Matter" column with that value.
+     - If a weekly row is found by "Their Ref", create
+       "Panel L Matter Ref Updates.xlsx" using:
+       "Matter File Ref", "Their Ref"
+       where Matter File Ref is the correct LegalSuite file ref.
+     - Upload "Panel L Matter Ref Updates.xlsx" to the FTP folder
+       "Matter Ref Updates" itself, not to any subfolder.
+     - Print statuses to the terminal.
+     - Write "Matter_Found_From_Weekly.xlsx" (ref + status).
+     - Write "Matter_Not_Found_From_Weekly.xlsx" (refs not found).
+     - Write "Panel L Matter Ref Updates.xlsx" for weekly rows found by Their Ref.
+     - Copy those weekly result workbooks into the verification folder and stamp
+       their verification columns the same way.
+     - If status is Closed and --close-closed is used, update LegalSuite to close.
+     - Re-fetch the matter after the update and verify the archive fields.
+     - If archive is rejected or does not stick, switch the matter to Pending Deletion
+       and verify that state instead.
+  9) Write run-level verification summary files:
+     - "verification/verification_summary.json"
+     - "verification/verification_summary.txt"
+
+Key columns used
+  - CSV column: "Matter File Ref" (override with --csv-column).
+  - Standard Bank claim column: "File Ref" (override with --standard-column).
+  - Weekly status column: tries "Current Status" and other common names.
+
+Close flow when --close-closed is used
+  1) Collect missing refs that are marked Closed in the weekly file.
+  2) Fetch each matter from LegalSuite by FileRef.
+  3) Build the archive payload and submit the update.
+  4) Fetch the matter again and verify:
+     archiveflag, archivestatus, archivestatusdescription, and archiveno.
+  5) If archive is rejected, the update errors, or the fetched matter still shows Live:
+     - Build a Pending Deletion payload.
+     - Submit the Pending Deletion update.
+     - Fetch the matter again and verify the pending fields.
+  6) Only count the matter as successfully handled if the fetched matter matches
+     the intended archived or pending state after verification.
+
+Useful flags
+  - --csv PATH: use a CSV instead of LegalSuite API.
+  - --api-key KEY: override LegalSuite API key.
+  - --client-ids ID [ID ...]: LegalSuite client IDs filter.
+  - --day N: download the Standard Bank claim file from N days back.
+  - --close-closed: close matters when weekly status is Closed.
+  - --close-dry-run: build close payloads without updating.
+  - --verification-dir PATH: choose where verification workbooks and summaries are written.
+
+Common outputs
+  - Report (SUP).xlsx
+  - Missing_Matter_File_Ref.xlsx
+  - Matter_Found_From_Weekly.xlsx
+  - Matter_Not_Found_From_Weekly.xlsx
+  - Panel L Matter Ref Updates.xlsx
+  - verification/verification_summary.json
+  - verification/verification_summary.txt
+  - verification/Missing_Matter_File_Ref.xlsx
+  - verification/Matter_Found_From_Weekly.xlsx
+  - verification/Matter_Not_Found_From_Weekly.xlsx
+  - verification/Panel L Matter Ref Updates.xlsx
