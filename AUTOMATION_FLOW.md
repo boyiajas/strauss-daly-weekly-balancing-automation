@@ -23,6 +23,71 @@ The goal is to keep LegalSuite aligned with the bank-side files while producing 
 - `Verification Outputs`
   Local artifacts that record what the automation concluded and why.
 
+## Architecture Overview
+
+This automation sits between three main operational layers:
+
+1. `Source systems`
+   - LegalSuite for internal matter data
+   - FTP for external Standard Bank files
+
+2. `Automation layer`
+   - `compare_file_refs.py`
+   - comparison logic
+   - fallback anomaly handling
+   - LegalSuite close/update logic
+   - verification and audit generation
+
+3. `Output and handoff layer`
+   - local Excel outputs
+   - verification artifacts
+   - FTP upload of matter-ref correction files
+
+At a high level, the architecture is a reconciliation pipeline with exception routing:
+
+- LegalSuite or CSV provides the starting matter population.
+- FTP claim files provide the primary reconciliation source.
+- FTP weekly files provide exception-resolution and status context.
+- LegalSuite provides the fallback lookup key `Their Ref` when `File Ref` fails.
+- The automation writes outputs locally and, where needed, pushes correction files back to FTP.
+
+## Field Mapping
+
+### Primary Comparison Mapping
+
+| Source | Source Field | Target | Target Field | Purpose |
+| --- | --- | --- | --- | --- |
+| LegalSuite report / CSV | `Matter File Ref` | Claim Amount file | `File Ref` | Primary reconciliation key |
+
+### Weekly Lookup Mapping
+
+| Source | Source Field | Target | Target Field | Purpose |
+| --- | --- | --- | --- | --- |
+| Missing matter list | `Matter File Ref` | Weekly Balancing file | `File Ref` | First weekly lookup attempt |
+| LegalSuite matter | `Their Ref` | Weekly Balancing file | `Matter` | Fallback lookup when weekly `File Ref` does not match |
+
+### Matter Ref Update File Mapping
+
+| Source | Source Field | Output File | Output Column | Purpose |
+| --- | --- | --- | --- | --- |
+| LegalSuite matter | `Matter File Ref` | `Panel L Matter Ref Updates.xlsx` | `Matter File Ref` | Correct file ref to be restored downstream |
+| LegalSuite matter | `Their Ref` | `Panel L Matter Ref Updates.xlsx` | `Their Ref` | Account number used to identify the weekly record |
+
+### Weekly Status Mapping
+
+| Source | Source Field | Internal Use | Purpose |
+| --- | --- | --- | --- |
+| Weekly Balancing file | `Current Status` | weekly status value | Determines whether the matter stays live, needs follow-up, or can be closed |
+
+### LegalSuite Close Verification Mapping
+
+| Source | Source Field | Verification Use | Purpose |
+| --- | --- | --- | --- |
+| LegalSuite matter after update | `archiveflag` | closure verification | Confirms archive state |
+| LegalSuite matter after update | `archivestatus` | closure verification | Confirms archive status code |
+| LegalSuite matter after update | `archivestatusdescription` | closure verification | Confirms archive status description |
+| LegalSuite matter after update | `archiveno` | fallback / informational verification | Archive number assigned or preserved by LegalSuite |
+
 ## High-Level Flow
 
 1. Collect the matter list from LegalSuite or from an input CSV.
