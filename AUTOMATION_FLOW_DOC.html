@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Automation Flow</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      color: #1f2937;
+      margin: 32px;
+      line-height: 1.45;
+      font-size: 12pt;
+    }
+    h1, h2, h3 {
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 24pt;
+      border-bottom: 2px solid #2563eb;
+      padding-bottom: 8px;
+    }
+    h2 {
+      font-size: 16pt;
+      margin-top: 24px;
+    }
+    h3 {
+      font-size: 13pt;
+      margin-top: 18px;
+    }
+    p {
+      margin: 8px 0;
+    }
+    ul, ol {
+      margin-top: 6px;
+      margin-bottom: 10px;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+    .diagram {
+      text-align: center;
+      margin: 20px 0 28px;
+    }
+    .diagram img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #cbd5e1;
+    }
+    .caption {
+      font-size: 10pt;
+      color: #475569;
+      margin-top: 6px;
+    }
+    .note {
+      background: #eff6ff;
+      border-left: 4px solid #2563eb;
+      padding: 10px 12px;
+      margin: 12px 0;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 10px 0 14px;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 8px;
+      vertical-align: top;
+    }
+    th {
+      background: #f8fafc;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <h1>Automation Flow</h1>
+
+  <p>
+    This document describes the <code>compare_file_refs</code> automation at a high level.
+    It focuses on the business flow, system handoffs, and exception paths rather than code-level implementation.
+  </p>
+
+  <div class="diagram">
+    <img src="automation_flow_diagram.svg" alt="Automation flow diagram">
+    <div class="caption">Figure 1: High-level reconciliation and exception-management flow.</div>
+  </div>
+
+  <h2>Purpose</h2>
+  <p>
+    The automation reconciles LegalSuite matters against Standard Bank source files, identifies exceptions,
+    investigates weekly-balancing anomalies, prepares correction files, and optionally closes matters in LegalSuite
+    when the weekly status supports closure.
+  </p>
+
+  <h2>Main Systems</h2>
+  <table>
+    <tr>
+      <th>System</th>
+      <th>Role</th>
+    </tr>
+    <tr>
+      <td>LegalSuite</td>
+      <td>Source of matter records, including <code>Matter File Ref</code>, <code>Their Ref</code>, and current matter state.</td>
+    </tr>
+    <tr>
+      <td>FTP</td>
+      <td>Source of claim and weekly files, and destination for the matter-ref correction workbook.</td>
+    </tr>
+    <tr>
+      <td>Claim Amount File</td>
+      <td>Daily file used for the primary comparison against LegalSuite matter refs.</td>
+    </tr>
+    <tr>
+      <td>Weekly Balancing File</td>
+      <td>Operational status source used to resolve missing refs and identify closure actions.</td>
+    </tr>
+    <tr>
+      <td>Verification Outputs</td>
+      <td>Audit artifacts showing what the automation concluded and what files were produced.</td>
+    </tr>
+  </table>
+
+  <h2>End-to-End Flow</h2>
+  <ol>
+    <li>Collect the matter list from LegalSuite or from a CSV input.</li>
+    <li>Download the current Standard Bank claim amount file from FTP.</li>
+    <li>Compare LegalSuite <code>Matter File Ref</code> values with claim file <code>File Ref</code> values.</li>
+    <li>Write the missing refs to an exception workbook.</li>
+    <li>If exceptions exist, download the current weekly balancing file.</li>
+    <li>Search weekly balancing by <code>File Ref</code>.</li>
+    <li>If still not found, search weekly balancing by LegalSuite <code>Their Ref</code> against the weekly <code>Matter</code> column.</li>
+    <li>Create downstream outputs based on what is found and what status is returned.</li>
+    <li>Upload the matter-ref correction file to FTP when a weekly mismatch is confirmed.</li>
+    <li>Optionally update LegalSuite for matters whose weekly status is <code>Closed</code>.</li>
+    <li>Create verification workbooks and run summaries.</li>
+  </ol>
+
+  <h2>Decision Paths</h2>
+
+  <h3>Direct Match In Claim File</h3>
+  <p>If the LegalSuite matter ref exists in the claim file, the record is considered reconciled and no exception action is needed.</p>
+
+  <h3>Missing From Claim File, Found In Weekly By File Ref</h3>
+  <p>
+    If the matter is missing from the claim file but appears in weekly balancing under the same <code>File Ref</code>,
+    the weekly status is used for downstream handling.
+  </p>
+
+  <h3>Missing From Claim File, Resolved By Their Ref</h3>
+  <p>
+    If the matter cannot be found in weekly balancing by <code>File Ref</code>, the automation fetches the LegalSuite matter,
+    reads <code>Their Ref</code>, and searches the weekly <code>Matter</code> column using that value.
+  </p>
+  <p>
+    A successful match means the weekly record exists but is carrying the wrong file reference.
+    The automation then creates <code>Panel L Matter Ref Updates.xlsx</code> with:
+  </p>
+  <ul>
+    <li><code>Matter File Ref</code>: the correct LegalSuite file ref</li>
+    <li><code>Their Ref</code>: the account number used to locate the weekly row</li>
+  </ul>
+  <div class="note">
+    That workbook is uploaded to the FTP folder <code>Matter Ref Updates</code> itself, not to any subfolder.
+  </div>
+
+  <h3>Missing From Claim File, Not Found In Weekly At All</h3>
+  <p>
+    If the matter cannot be found in weekly balancing by either <code>File Ref</code> or <code>Their Ref</code>,
+    it remains unresolved for the run and is written to the not-found output for manual follow-up.
+  </p>
+
+  <h2>Status Handling</h2>
+  <p>
+    Weekly balancing is treated as the operational status source during exception handling.
+  </p>
+  <ul>
+    <li>If the weekly status is open or live-type, the matter generally remains live in LegalSuite.</li>
+    <li>If the weekly status is closed, the automation can optionally trigger the LegalSuite closure flow.</li>
+  </ul>
+
+  <h2>LegalSuite Closure Logic</h2>
+  <ol>
+    <li>Identify missing matters whose weekly status is <code>Closed</code>.</li>
+    <li>Fetch the matter from LegalSuite by <code>File Ref</code>.</li>
+    <li>Attempt the archive update.</li>
+    <li>Fetch the matter again and verify the returned archive state.</li>
+    <li>If archive is rejected or does not stick, fall back to a Pending Deletion state.</li>
+    <li>Fetch the matter again and verify the fallback state.</li>
+  </ol>
+
+  <h2>Operational Outputs</h2>
+  <ul>
+    <li><code>Report (SUP).xlsx</code></li>
+    <li><code>Missing_Matter_File_Ref.xlsx</code></li>
+    <li><code>Matter_Found_From_Weekly.xlsx</code></li>
+    <li><code>Matter_Not_Found_From_Weekly.xlsx</code></li>
+    <li><code>Panel L Matter Ref Updates.xlsx</code></li>
+  </ul>
+
+  <h2>Verification Outputs</h2>
+  <ul>
+    <li><code>verification/</code> copies of generated workbooks</li>
+    <li><code>verification_summary.json</code></li>
+    <li><code>verification_summary.txt</code></li>
+  </ul>
+
+  <h2>Control Principles</h2>
+  <ul>
+    <li>Prefer direct reconciliation first.</li>
+    <li>Use weekly balancing as the primary exception-resolution source.</li>
+    <li>Use <code>Their Ref</code> as the fallback key when <code>File Ref</code> fails.</li>
+    <li>Do not close matters simply because they are absent from the claim file.</li>
+    <li>Keep an audit trail for every significant result.</li>
+  </ul>
+
+  <h2>Summary</h2>
+  <p>
+    At an abstract level, this automation is an exception-management pipeline:
+    compare by file ref, validate against weekly balancing, resolve anomalies through account number fallback,
+    generate correction files where identifiers are inconsistent, and only update LegalSuite when the weekly status supports that action.
+  </p>
+</body>
+</html>

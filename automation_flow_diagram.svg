@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="980" viewBox="0 0 1400 980">
+  <defs>
+    <style>
+      .title { font: 700 34px Arial, sans-serif; fill: #1d2a3a; }
+      .label { font: 600 20px Arial, sans-serif; fill: #1d2a3a; }
+      .body { font: 16px Arial, sans-serif; fill: #334155; }
+      .small { font: 14px Arial, sans-serif; fill: #475569; }
+      .box { fill: #f8fafc; stroke: #2563eb; stroke-width: 2.5; rx: 16; ry: 16; }
+      .decision { fill: #fff7ed; stroke: #ea580c; stroke-width: 2.5; }
+      .output { fill: #ecfdf5; stroke: #16a34a; stroke-width: 2.5; rx: 16; ry: 16; }
+      .warning { fill: #fef2f2; stroke: #dc2626; stroke-width: 2.5; rx: 16; ry: 16; }
+      .arrow { stroke: #475569; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .dashed { stroke-dasharray: 8 6; }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <rect width="1400" height="980" fill="#ffffff"/>
+  <text x="700" y="52" text-anchor="middle" class="title">compare_file_refs Automation Flow</text>
+
+  <rect x="70" y="95" width="280" height="120" class="box"/>
+  <text x="210" y="135" text-anchor="middle" class="label">1. Collect Matter List</text>
+  <text x="210" y="165" text-anchor="middle" class="body">LegalSuite API or CSV input</text>
+  <text x="210" y="190" text-anchor="middle" class="small">Primary source of Matter File Ref values</text>
+
+  <rect x="410" y="95" width="280" height="120" class="box"/>
+  <text x="550" y="135" text-anchor="middle" class="label">2. Download Claim File</text>
+  <text x="550" y="165" text-anchor="middle" class="body">FTP daily Standard Bank claim file</text>
+  <text x="550" y="190" text-anchor="middle" class="small">Primary comparison source</text>
+
+  <rect x="750" y="95" width="280" height="120" class="box"/>
+  <text x="890" y="135" text-anchor="middle" class="label">3. Compare File Refs</text>
+  <text x="890" y="165" text-anchor="middle" class="body">Matter File Ref vs Claim File Ref</text>
+  <text x="890" y="190" text-anchor="middle" class="small">Split into matched and missing</text>
+
+  <polygon points="1190,95 1320,155 1190,215 1060,155" class="decision"/>
+  <text x="1190" y="148" text-anchor="middle" class="label">Missing?</text>
+  <text x="1190" y="175" text-anchor="middle" class="small">Any unmatched refs</text>
+
+  <rect x="1030" y="285" width="320" height="120" class="output"/>
+  <text x="1190" y="325" text-anchor="middle" class="label">4. Missing Output</text>
+  <text x="1190" y="355" text-anchor="middle" class="body">Write Missing_Matter_File_Ref.xlsx</text>
+  <text x="1190" y="380" text-anchor="middle" class="small">Verification copy also created</text>
+
+  <rect x="670" y="285" width="280" height="120" class="box"/>
+  <text x="810" y="325" text-anchor="middle" class="label">5. Download Weekly File</text>
+  <text x="810" y="355" text-anchor="middle" class="body">FTP weekly balancing workbook</text>
+  <text x="810" y="380" text-anchor="middle" class="small">Current week selection</text>
+
+  <rect x="330" y="285" width="280" height="120" class="box"/>
+  <text x="470" y="325" text-anchor="middle" class="label">6. Weekly Lookup</text>
+  <text x="470" y="355" text-anchor="middle" class="body">Search weekly by File Ref</text>
+  <text x="470" y="380" text-anchor="middle" class="small">Collect status when found</text>
+
+  <polygon points="210,285 340,345 210,405 80,345" class="decision"/>
+  <text x="210" y="338" text-anchor="middle" class="label">Found by</text>
+  <text x="210" y="364" text-anchor="middle" class="label">File Ref?</text>
+
+  <rect x="70" y="495" width="300" height="120" class="output"/>
+  <text x="220" y="535" text-anchor="middle" class="label">7A. Weekly Found</text>
+  <text x="220" y="565" text-anchor="middle" class="body">Write Matter_Found_From_Weekly.xlsx</text>
+  <text x="220" y="590" text-anchor="middle" class="small">Status available for next actions</text>
+
+  <rect x="410" y="495" width="320" height="120" class="box"/>
+  <text x="570" y="535" text-anchor="middle" class="label">7B. LegalSuite Fallback</text>
+  <text x="570" y="565" text-anchor="middle" class="body">Fetch matter by missing File Ref</text>
+  <text x="570" y="590" text-anchor="middle" class="small">Read Their Ref account number</text>
+
+  <rect x="770" y="495" width="320" height="120" class="box"/>
+  <text x="930" y="535" text-anchor="middle" class="label">8. Search Weekly Matter</text>
+  <text x="930" y="565" text-anchor="middle" class="body">Use Their Ref in weekly Matter column</text>
+  <text x="930" y="590" text-anchor="middle" class="small">Anomaly resolution path</text>
+
+  <polygon points="1230,495 1360,555 1230,615 1100,555" class="decision"/>
+  <text x="1230" y="548" text-anchor="middle" class="label">Found by</text>
+  <text x="1230" y="574" text-anchor="middle" class="label">Their Ref?</text>
+
+  <rect x="1020" y="705" width="330" height="120" class="output"/>
+  <text x="1185" y="745" text-anchor="middle" class="label">9A. Matter Ref Update</text>
+  <text x="1185" y="775" text-anchor="middle" class="body">Create Panel L Matter Ref Updates.xlsx</text>
+  <text x="1185" y="800" text-anchor="middle" class="small">Columns: Matter File Ref, Their Ref</text>
+
+  <rect x="650" y="705" width="300" height="120" class="output"/>
+  <text x="800" y="745" text-anchor="middle" class="label">9B. FTP Upload</text>
+  <text x="800" y="775" text-anchor="middle" class="body">Upload to Matter Ref Updates</text>
+  <text x="800" y="800" text-anchor="middle" class="small">Root folder only, no subfolder</text>
+
+  <rect x="310" y="705" width="280" height="120" class="warning"/>
+  <text x="450" y="745" text-anchor="middle" class="label">9C. Still Not Found</text>
+  <text x="450" y="775" text-anchor="middle" class="body">Write Matter_Not_Found_From_Weekly.xlsx</text>
+  <text x="450" y="800" text-anchor="middle" class="small">Manual follow-up required</text>
+
+  <rect x="70" y="705" width="180" height="120" class="output"/>
+  <text x="160" y="745" text-anchor="middle" class="label">10. Close Logic</text>
+  <text x="160" y="775" text-anchor="middle" class="body">If status is Closed</text>
+  <text x="160" y="800" text-anchor="middle" class="small">Optional LegalSuite update</text>
+
+  <rect x="520" y="875" width="360" height="70" class="output"/>
+  <text x="700" y="915" text-anchor="middle" class="label">11. Verification Artifacts</text>
+  <text x="700" y="938" text-anchor="middle" class="small">verification/ workbooks + summary JSON/TXT</text>
+
+  <path d="M350 155 L410 155" class="arrow"/>
+  <path d="M690 155 L750 155" class="arrow"/>
+  <path d="M1030 155 L1060 155" class="arrow"/>
+  <path d="M1190 215 L1190 285" class="arrow"/>
+  <path d="M1030 345 L950 345" class="arrow"/>
+  <path d="M670 345 L610 345" class="arrow"/>
+  <path d="M330 345 L340 345" class="arrow"/>
+  <path d="M210 405 L220 495" class="arrow"/>
+  <path d="M340 345 L570 495" class="arrow dashed"/>
+  <path d="M730 555 L770 555" class="arrow"/>
+  <path d="M1090 555 L1100 555" class="arrow"/>
+  <path d="M1230 615 L1185 705" class="arrow"/>
+  <path d="M1185 825 L950 825" class="arrow"/>
+  <path d="M1100 555 L450 705" class="arrow dashed"/>
+  <path d="M220 615 L160 705" class="arrow"/>
+  <path d="M160 825 L520 910" class="arrow"/>
+  <path d="M450 825 L520 910" class="arrow"/>
+  <path d="M800 825 L820 875" class="arrow"/>
+  <path d="M1185 825 L880 910" class="arrow"/>
+
+  <text x="1040" y="145" class="small">No: run ends with no exceptions</text>
+  <text x="250" y="470" class="small">Yes</text>
+  <text x="285" y="338" class="small">No</text>
+  <text x="1265" y="680" class="small">Yes</text>
+  <text x="1060" y="640" class="small">No</text>
+</svg>
